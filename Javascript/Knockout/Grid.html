@@ -1,0 +1,351 @@
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resource Tracker</title>
+    <link href="/Content/css?v=O6cYJcuajEi8P66tgoAdRBHBAnPi7ldCK3oi-gk2rfk1" rel="stylesheet">
+    <script src="/bundles/modernizr?v=wBEWDufH_8Md-Pbioxomt90vm6tJN2Pyy9u9zHtWsPo1"></script>
+</head>
+
+<body>
+    <div class="navbar navbar-inverse navbar-fixed-top">
+        <div class="container">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/"> - Wombat</a>
+            </div>
+            <div class="navbar-collapse collapse">
+                <ul class="nav navbar-nav">
+                    <li><a href="/ResourceEntry">Resource Entry</a></li>
+                    <li><a href="/reporting">Reporting</a></li>
+                </ul>
+                <form action="/Account/LogOff" class="navbar-right" id="logoutForm" method="post">
+                    <input name="__RequestVerificationToken" type="hidden" value="DsO7sOrJtQDK0ATQniWdELWI5BMSPwbghHRaE8NxaGy9qdVjIAF8GsvXhwLGHcWKmyqsSTgjjGQovTchYKqxSDR5IT_FuXEIkwdR39qA5PNy8Q_JFcUZfNeWxz32tFnvG2SX9ZmyMChiSUHJN3kKYA2">
+                    <ul class="nav navbar-nav navbar-right">
+                        <li>
+                            <a href="/Manage" title="Manage">Rob D</a>
+                        </li>
+                        <li><a href="javascript:document.getElementById('logoutForm').submit()">Log off</a></li>
+                    </ul>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="container body-content">
+        <h2>Reporting - <span data-bind="text: Billable_Nonbillable"></span></h2>
+        <div id="loader" style="display:none;float:right;">loading <img src="/Content/images/loading.gif"></div>
+        <form action="/reporting" method="post">
+            <p>
+                Date:
+                <input type="text" name="date1" class="datepicker" value="6/8/2015"> -
+                <input type="text" name="date2" class="datepicker" value="9/7/2015">
+                <select id="billable" name="billable">
+                    <option value="-">All</option>
+                    <option value="true">Billable [B]</option>
+                    <option value="false">Non-Billable [NB]</option>
+                </select>
+                <select id="client" name="client" data-bind="event:{ change: GetClientProjects($('#client').val())}">
+                    <option value="">-</option>
+                    <option value="1">Company 1</option>
+                    <option value="2">Company 2</option>
+                    <option value="3">Company 3</option>
+                </select>
+                <select id="project" data-bind="value: SelectedProject, visible: SelectedClient, options: ClientProjects, optionsValue: 'ProjectID', optionsText : 'Name', optionsCaption : '-project-'"></select>
+                <button id="refresh_btn" class="btn btn-default" data-bind="click: UpdateWeeks">Update</button>
+            </p>
+            <hr>
+            <table class="table" id="ReportingTable">
+                <thead>
+                    <tr>
+                        <th nowrap="" style="width: 150px !important;">Resource Name</th>
+                        <!-- ko foreach: Weeks -->
+                        <th data-bind="text:$data" style="text-align:center;"></th>
+                        <!-- /ko -->
+                    </tr>
+                </thead>
+                <tbody data-bind="foreach:ReportingGrid">
+                    <tr>
+                        <td data-bind="text:ResourceName"></td>
+                        <!-- ko foreach: AllocationItems -->
+                        <!-- ko if: Hours -->
+                        <td class="col-sm-1" onmouseover="PageViewModel.GetPopOverData($(this));" data-week-start="" data-resid="" data-bind="attr: { 'data-week-start': WeekStartDate, 'data-resid':$parent.ResourceId }, text:Hours, style: {color: Hours > 40 ? 'red' : 'white'}" style="text-align:center; cursor: pointer; font-size:120%; font-weight: bold;"></td>
+                        <!-- /ko -->
+                        <!-- ko ifnot: Hours -->
+                        <td class="col-sm-1" style="text-align:center;">-</td>
+                        <!-- /ko -->
+                        <!-- /ko -->
+                    </tr>
+                </tbody>
+            </table>
+            <table class="table" id="ReportingTableUnassigned">
+                <thead>
+                    <tr>
+                        <th nowrap="" style="width: 150px !important;">Unassigned Role</th>
+                        <!-- ko foreach: Weeks -->
+                        <th data-bind="text:$data" style="text-align:center;"></th>
+                        <!-- /ko -->
+                    </tr>
+                </thead>
+                <tbody data-bind="foreach:UnassignedGrid">
+                    <tr>
+                        <td data-bind="text:ProjectRole.Name"></td>
+                        <!-- ko foreach: AllocationItems -->
+                        <!-- ko if: Hours -->
+                        <td class="col-sm-1" onmouseover="PageViewModel.GetPopOverDataUnassigned($(this));" data-week-start="" data-project-roleid="" data-bind="attr: { 'data-week-start': WeekStartDate, 'data-project-roleid': $parent.ProjectRole.ProjectRoleID }, text: Hours , style: { color: Hours > 40 ? 'red' : 'white' }" style="text-align:center; cursor: pointer; font-size:120%; font-weight: bold;"></td>
+                        <!-- /ko -->
+                        <!-- ko ifnot: Hours -->
+                        <td class="col-sm-1" style="text-align:center;">-</td>
+                        <!-- /ko -->
+                        <!-- /ko -->
+                    </tr>
+                </tbody>
+            </table>
+            <script type="text/html" id="popoverTemplate">
+                <!-- ko foreach: data -->
+                <!-- ko if: Billable -->
+                <span>[B]</span>
+                <!-- /ko -->
+                <!-- ko ifnot: Billable -->
+                <span>[NB]</span>
+                <!-- /ko -->
+                <span data-bind="text: Client"></span> -
+                <span data-bind="text: Project"></span> -
+                <span data-bind="text: Role"></span> -
+                <span data-bind="text: Hours, style: {color: Hours > 40 ? 'red' : 'white'}" style="font-weight:bold;"></span>
+                <br />
+                <!-- /ko -->
+            </script>
+        </form>
+        <footer>
+            <hr>
+            <p>© 2015 - </p>
+        </footer>
+    </div>
+    <script src="/bundles/jquery?v=FVs3ACwOLIVInrAl5sdzR2jrCDmVOWFbZMY6g6Q0ulE1"></script>
+    <script src="/bundles/bootstrap?v=JdS9QLbR_KcNFxrKonXad-JDLb6Oc4xCFQhJ64bb1kg1"></script>
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="/bundles/jqueryval?v=NOVQDySGO89wzMzO5x7mWS4C_uAdynpZe_Lk2y-xEM41"></script>
+    <script src="/bundles/knockout?v=cRQsZBHpVrBiQ39NGrOSoDWykoiKtdNVSZHQ-qRJNkg1"></script>
+    <script type="text/javascript">
+        var PageViewModel = {
+            Billable_Nonbillable: ko.observable(),
+            Weeks: ko.observableArray([]),
+            SelectedClient: ko.observable(undefined),
+            SelectedProject: ko.observable(),
+            ClientProjects: ko.observableArray([]),
+            ReportingGrid: ko.observableArray([]),
+            UnassignedGrid: ko.observableArray([]),
+            SetBillable_Nonbillable: function() {
+                this.Billable_Nonbillable($("#billable option:selected").text());
+            },
+            DoPopover: function(data, parent) {
+                return {
+                    template: 'popoverTemplate',
+                    data: {
+                        data: PageViewModel.GetPopOverData(data, parent)
+                    },
+                    options: {
+                        trigger: 'hover',
+                        container: 'body',
+                        title: parent.ResourceName + " - " + data.WeekStartDate,
+                        content: 'sample',
+                        placement: 'top'
+                    }
+                };
+            },
+            DoPopoverUnassigned: function(data, parent) {
+                return {
+                    template: 'popoverTemplate',
+                    data: {
+                        data: PageViewModel.GetPopOverDataUnassigned(data, parent)
+                    },
+                    options: {
+                        trigger: 'hover',
+                        container: 'body',
+                        title: parent.ResourceName + " - " + data.WeekStartDate,
+                        content: 'sample',
+                        placement: 'top'
+                    }
+                };
+            },
+            GetClientProjects: function(client_id) {
+                if (client_id == "") {
+                    PageViewModel.SelectedClient(undefined);
+                    PageViewModel.ClientProjects(undefined);
+                    return false;
+                }
+                $.ajax({
+                    url: "/reporting/GetClientProjects",
+                    type: "GET",
+                    cache: true,
+                    dataType: "json",
+                    data: {
+                        client_id: client_id
+                    },
+                    beforeSend: function() {
+                        $('#loader').show();
+                    },
+                    complete: function() {
+                        $('#loader').hide();
+                    },
+                    success: function(result) {
+                        PageViewModel.SelectedClient(client_id);
+                        PageViewModel.ClientProjects(result);
+                    },
+                    failure: function(jqXHR) {
+                        alert(jqXHR.statusText);
+                    }
+                });
+            },
+            GetPopOverData: function(calling_td) {
+                calling_td.popover('destroy');
+                var result = null;
+                $.ajax({
+                    url: "/reporting/GetPopoverData",
+                    type: "GET",
+                    cache: true,
+                    dataType: "json",
+                    async: false,
+                    data: {
+                        date_of_week: calling_td.data("week-start"),
+                        user_id: calling_td.data("resid")
+                    },
+                    beforeSend: function() {
+                        $('#loader').show();
+                    },
+                    complete: function() {
+                        $('#loader').hide();
+                    },
+                    success: function(response) {
+                        result = response;
+                        console.log(response);
+                        calling_td.popover({
+                            title: calling_td.parent().children(':first-child').text(),
+                            content: buildPopover(response),
+                            container: 'body',
+                            placement: 'top',
+                            trigger: 'hover',
+                            data: {
+                                data: response
+                            },
+                            html: true
+                        }).popover('show');
+                    },
+                    failure: function(jqXHR) {
+                        alert(jqXHR.statusText);
+                    }
+                });
+            },
+            GetPopOverDataUnassigned: function(calling_td) {
+                var result = null;
+                $.ajax({
+                    url: "/reporting/GetPopoverDataUnassigned",
+                    type: "GET",
+                    cache: false,
+                    dataType: "json",
+                    async: false,
+                    data: {
+                        date_of_week: calling_td.data("week-start"),
+                        role_id: calling_td.data("project-roleid")
+                    },
+                    beforeSend: function() {
+                        $('#loader').show();
+                    },
+                    complete: function() {
+                        $('#loader').hide();
+                    },
+                    success: function(response) {
+                        result = response;
+                        console.log(response);
+                        calling_td.popover({
+                            title: calling_td.parent().children(':first-child').text(),
+                            content: buildPopover(response),
+                            container: 'body',
+                            placement: 'top',
+                            trigger: 'hover',
+                            data: {
+                                data: response
+                            },
+                            html: true
+                        }).popover('show');
+                    },
+                    failure: function(jqXHR) {
+                        alert(jqXHR.statusText);
+                    }
+                });
+            },
+            UpdateWeeks: function() {
+                var dateRange = $.map($(".datepicker"), function(e) {
+                    return $(e).val();
+                });
+                $.ajax({
+                    url: "/reporting/CreateGrid",
+                    type: "GET",
+                    cache: false,
+                    dataType: "json",
+                    data: {
+                        date_range: JSON.stringify(dateRange),
+                        billable: $("#billable").val(),
+                        client_id: PageViewModel.SelectedClient,
+                        project_id: PageViewModel.SelectedProject
+                    },
+                    beforeSend: function() {
+                        $('#loader').show();
+                    },
+                    complete: function() {
+                        $('#loader').hide();
+                    },
+                    success: function(result) {
+                        PageViewModel.Weeks(result.Weeks);
+                        PageViewModel.ReportingGrid(result.ReportingGrid);
+                        PageViewModel.UnassignedGrid(result.UnassignedGrid);
+                        PageViewModel.SetBillable_Nonbillable();
+                    },
+                    failure: function(jqXHR) {
+                        alert(jqXHR.statusText);
+                    }
+                });
+            }
+        }
+
+        function buildPopover(returnData) {
+            var index = 0;
+            var returnStr = "";
+            for (index = 0; index < returnData.length; index++) {
+                var item = returnData[index];
+                if (item.Billable == true)
+                    returnStr += "<span>[B]</span>";
+                else
+                    returnStr += "<span>[NB]</span>";
+                returnStr += "<span>" + item.Client + "</span> - ";
+                returnStr += "<span>" + item.Project + "</span> - ";
+                returnStr += "<span>" + item.Role + "</span> - ";
+                if (item.Hours > 40)
+                    returnStr += "<span style='color:red; font-weight:bold;'>" + item.Hours + "</span>";
+                else
+                    returnStr += "<span style='font-weight:bold;'>" + item.Hours + "</span>";
+                returnStr += "<br/>";
+            }
+            return returnStr;
+        }
+        ko.applyBindings(PageViewModel);
+        PageViewModel.UpdateWeeks();
+        $(".datepicker").datepicker({
+            changeMonth: true,
+            changeYear: true
+        });
+        $(document).ready(function() {
+            $("#ReportingTable, #ReportingTableUnassigned").on("mouseover mouseout", 'tbody tr', function() {
+                $(this).toggleClass('highlight');
+            });
+        });
+    </script>
+
+</body>
+
+</html>
