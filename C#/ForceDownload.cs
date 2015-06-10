@@ -1,4 +1,4 @@
- /*
+        /*
          * GET: This method is called to force a download on the media file (pdf) based on the passed GUID of the media item
          * Example: /Search/DownloadMediaItem/{89810FE1-9490-4CEA-A750-5653BF28017B}
          */
